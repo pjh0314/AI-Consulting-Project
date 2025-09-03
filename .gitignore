@@ -13,3 +13,6 @@ env/
 
 # Env files
 .env
+
+# Node Modules
+frontend/node_modules/
