@@ -10,22 +10,16 @@ import PlanScreen from "./screens/PlanScreen";
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [plan, setPlan] = useState(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
-      // Load saved plan
-      const savedPlan = await AsyncStorage.getItem("plan");
-      if (savedPlan) setPlan(JSON.parse(savedPlan));
-
-      // Check if user is registered
+      // ✅ Check if user is registered
       const registeredUser = await AsyncStorage.getItem("user");
       if (registeredUser) {
         setIsRegistered(true);
       }
-
       setLoading(false);
     };
 
@@ -33,7 +27,7 @@ export default function App() {
   }, []);
 
   if (loading) {
-    return null; // You could return a splash/loading screen here
+    return null; // You could add a splash screen here
   }
 
   return (
@@ -43,16 +37,12 @@ export default function App() {
           {(props) => (
             <RegisterScreen
               {...props}
-              plan={plan}
               goToPlan={() => props.navigation.navigate("Plan")}
             />
           )}
         </Stack.Screen>
 
-        <Stack.Screen name="Login">
-          {(props) => <LoginScreen {...props} plan={plan} />}
-        </Stack.Screen>
-
+        <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Plan" component={PlanScreen} />
       </Stack.Navigator>
     </NavigationContainer>
