@@ -2,10 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, Button, FlatList, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 
 export default function PlanScreen() {
   const [plans, setPlans] = useState([]);
-
+  const navigation = useNavigation();
+  
   // List of sample workouts (1–10)
   const workoutPool = [
     "Push Ups 3x15",
@@ -66,6 +68,19 @@ export default function PlanScreen() {
     await AsyncStorage.setItem("plans", JSON.stringify(updatedPlans));
   };
 
+  const logout = async () => {
+    try {
+      await AsyncStorage.multiRemove(["user", "token"]); // 저장된 로그인 정보 제거
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: "Login" }], // 필요에 따라 "Register"로 변경 가능
+        })
+      );
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+  };
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
@@ -101,6 +116,9 @@ export default function PlanScreen() {
       )}
 
       <Button title="Add Dummy Plan" onPress={addDummyPlan} />
+        
+      <View style={{ height: 8 }} />
+      <Button title="Logout" onPress={logout} />
     </View>
   );
 }
