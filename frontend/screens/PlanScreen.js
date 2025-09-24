@@ -1,106 +1,129 @@
-// screens/PlanScreen.js
 import React, { useEffect, useState } from "react";
-import { View, Text, Button, FlatList, TouchableOpacity } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, Button, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import payload from "../src/payload.json";
+
+const STORAGE_KEY = "@my_fitness_plans";
 
 export default function PlanScreen() {
-  const [plans, setPlans] = useState([]);
+  const [plan, setPlan] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // List of sample workouts (1–10)
-  const workoutPool = [
-    "Push Ups 3x15",
-    "Squats 3x20",
-    "Pull Ups 3x8",
-    "Lunges 3x12",
-    "Plank 3x60s",
-    "Burpees 3x10",
-    "Sit Ups 3x25",
-    "Jumping Jacks 3x50",
-    "Mountain Climbers 3x40",
-    "Dips 3x12",
-  ];
-
-  // Load all saved plans
   useEffect(() => {
-    const loadPlans = async () => {
+    const fetchPlan = async () => {
       try {
-        const savedPlans = await AsyncStorage.getItem("plans");
-        if (savedPlans) {
-          setPlans(JSON.parse(savedPlans));
+        const response = await fetch("http://127.0.0.1:8000/test", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      } catch (error) {
-        console.error("Error loading plans:", error);
+
+        const data = await response.json();
+        setPlan(data);
+      } catch (err) {
+        console.error("Error fetching plan:", err);
+        Alert.alert("Error", "Failed to fetch plan from backend. Using sample plan.");
+        // fallback if needed
+        // setPlan(samplePlan);
+      } finally {
+        setLoading(false);
       }
     };
-    loadPlans();
+
+    fetchPlan();
   }, []);
 
-  // Delete a specific plan
-  const deletePlan = async (index) => {
+  // Save plan locally
+  const savePlan = async () => {
     try {
-      const updatedPlans = plans.filter((_, i) => i !== index);
-      setPlans(updatedPlans);
-      await AsyncStorage.setItem("plans", JSON.stringify(updatedPlans));
-    } catch (error) {
-      console.error("Error deleting plan:", error);
+      const savedPlans = await AsyncStorage.getItem(STORAGE_KEY);
+      let plansArray = savedPlans ? JSON.parse(savedPlans) : [];
+      if (!Array.isArray(plansArray)) plansArray = [];
+
+      plansArray.push(plan);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(plansArray));
+      Alert.alert("Saved", "Plan saved locally!");
+    } catch (err) {
+      console.error("Error saving plan:", err);
     }
   };
 
-  // Add a sample plan for testing, when pressing the button at the bottom
-  const addDummyPlan = async () => {
-    // Pick random workout
-    const randomWorkout =
-      workoutPool[Math.floor(Math.random() * workoutPool.length)];
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+        <Text>Generating Personalized Workout Plan...</Text>
+      </View>
+    );
+  }
 
-    // Randomize week between 1–10
-    const randomWeek = Math.floor(Math.random() * 10) + 1;
-
-    const newPlan = {
-      week: randomWeek,
-      day: 1,
-      workout: randomWorkout,
-    };
-
-    const updatedPlans = [...plans, newPlan];
-    setPlans(updatedPlans);
-    await AsyncStorage.setItem("plans", JSON.stringify(updatedPlans));
-  };
-
+  if (!plan) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>No plan available.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}>
-        Saved Plans:
+      <Button title="Save Plan Locally" onPress={savePlan} />
+
+      <Text style={{ fontSize: 22, fontWeight: "bold", marginBottom: 10 }}>
+        Weekly Plan
       </Text>
 
-      {plans.length === 0 ? (
-        <Text>No plans saved yet.</Text>
-      ) : (
-        <FlatList
-          data={plans}
-          keyExtractor={(_, index) => index.toString()}
-          renderItem={({ item, index }) => (
-            <View
-              style={{
-                padding: 10,
-                marginVertical: 5,
-                borderWidth: 1,
-                borderColor: "#ccc",
-                borderRadius: 5,
-                flexDirection: "row",
-                justifyContent: "space-between",
-              }}
-            >
-              <Text>{`Week ${item.week}, Day ${item.day}: ${item.workout}`}</Text>
-              <TouchableOpacity onPress={() => deletePlan(index)}>
-                <Text style={{ color: "red" }}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-      )}
+      <FlatList
+        data={plan.weekly}
+        keyExtractor={(item) => item.week_number.toString()}
+        renderItem={({ item }) => (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "600" }}>
+              Week {item.week_number}: {item.theme}
+            </Text>
+            <Text style={{ marginBottom: 8 }}>{item.notes}</Text>
+            {item.details.map((d, idx) => (
+              <Text key={idx}>
+                • {d.label} {d.target_value ? `- ${d.target_value}` : ""}
+              </Text>
+            ))}
+          </View>
+        )}
+      />
 
-      <Button title="Add Dummy Plan" onPress={addDummyPlan} />
+      <Text style={{ fontSize: 22, fontWeight: "bold", marginVertical: 10 }}>
+        Daily Plan
+      </Text>
+
+      <FlatList
+        data={plan.daily}
+        keyExtractor={(item) => item.date}
+        renderItem={({ item }) => (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 16, fontWeight: "600", marginBottom: 5 }}>
+              {item.date}
+            </Text>
+            {item.blocks.map((block, idx) => (
+              <View key={idx} style={{ marginBottom: 8 }}>
+                <Text style={{ fontWeight: "500" }}>
+                  {block.title} ({block.category}, {block.duration_min} min)
+                </Text>
+                {block.details.map((d, j) => (
+                  <Text key={j}>
+                    • {d.label} {d.target_value ? `- ${d.target_value}` : ""}
+                  </Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        )}
+      />
     </View>
   );
 }
