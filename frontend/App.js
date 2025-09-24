@@ -1,50 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import PlanScreen from "./screens/PlanScreen";
+import ViewPlanScreen from "./screens/ViewPlanScreen";
+import PayloadFormScreen from "./screens/PayloadFormScreen";
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [isRegistered, setIsRegistered] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      // ✅ Check if user is registered
-      const registeredUser = await AsyncStorage.getItem("user");
-      if (registeredUser) {
-        setIsRegistered(true);
-      }
-      setLoading(false);
-    };
-
-    loadData();
-  }, []);
-
-  if (loading) {
-    return null; // You could add a splash screen here
-  }
-
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={isRegistered ? "Login" : "Register"}>
-        <Stack.Screen name="Register">
-          {(props) => (
-            <RegisterScreen
-              {...props}
-              goToPlan={() => props.navigation.navigate("Plan")}
-            />
-          )}
-        </Stack.Screen>
-
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Plan" component={PlanScreen} />
+      <Stack.Navigator initialRouteName="RegisterScreen">
+        <Stack.Screen name="RegisterScreen" component={RegisterScreen} options={{ title: "Home" }} />
+        <Stack.Screen name="PayloadFormScreen" component={PayloadFormScreen} options={{ title: "Build Payload" }} />
+        <Stack.Screen name="PlanScreen" component={PlanScreen} options={{ title: "Add Plans" }} />
+        <Stack.Screen name="ViewPlanScreen" component={ViewPlanScreen} options={{ title: "View Plan" }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
-}
+} 
