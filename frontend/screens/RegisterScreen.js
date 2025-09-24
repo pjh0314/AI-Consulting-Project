@@ -1,19 +1,29 @@
+// frontend/screens/RegisterScreen.js
 import React from "react";
-import { View, Button, Text } from "react-native";
+import { View, Text, Button, StyleSheet } from "react-native";
 
 export default function RegisterScreen({ navigation }) {
   return (
-    <View style={{ flex: 1, justifyContent: "center", padding: 16 }}>
-      <Text style={{ fontSize: 18, marginBottom: 20 }}>
-        Testing Plan Display
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Welcome!</Text>
 
-      {/* ✅ Navigate to PlanScreen */}
-      <Button title="Load Plan" onPress={() => navigation.navigate("Plan")} />
+      {/* Navigate to PayloadFormScreen instead of PlanScreen */}
       <Button
-        title="View Saved Plans"
-        onPress={() => navigation.navigate("ViewPlans")}
+        title="Add Plans"
+        onPress={() => navigation.navigate("PayloadFormScreen")}
       />
+
+      <View style={{ marginTop: 20 }}>
+        <Button
+          title="View Plans"
+          onPress={() => navigation.navigate("ViewPlanScreen")}
+        />
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 22, marginBottom: 20 },
+});
