@@ -19,6 +19,13 @@ export default function RegisterScreen({ navigation }) {
           onPress={() => navigation.navigate("ViewPlanScreen")}
         />
       </View>
+
+      <View style={{ marginTop: 20}}>
+        <Button
+          title="Calendar"
+          onPress={() => navigation.navigate("CalendarChecklist")}
+        />
+      </View>
     </View>
   );
 }
