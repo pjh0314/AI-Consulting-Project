@@ -6,13 +6,9 @@ git clone <your-repo-url>
 cd ai-consulting-app
 
 
-1. npm install -g @expo/cli
-to start: npx expo start -c
-
-sep 16
-1. added @react-native-async-storage/async-storage
-2. added planscreen to see if my plans are getting saved well in plan array, using asyncstorage
-
+1. npm install inside frontend folder (will ack like requirements.txt of python)
+to start simulator: npx expo start -c
+uvicorn, venv needed.
 
 By Minsoo Jaehyun Joonhyung Sangwon
 
