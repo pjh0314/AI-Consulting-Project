@@ -5,6 +5,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Button,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useIsFocused } from "@react-navigation/native";
@@ -28,14 +29,38 @@ export default function ViewPlanScreen({ navigation }) {
     }
   };
 
+  // ✅ 특정 plan 삭제
+  const deletePlan = async (id) => {
+    try {
+      const updatedPlans = plans.filter((plan) => plan.id !== id);
+      setPlans(updatedPlans);
+      await AsyncStorage.setItem("plans", JSON.stringify(updatedPlans));
+    } catch (e) {
+      console.error("Error deleting plan:", e);
+    }
+  };
+
   const renderPlanItem = ({ item }) => {
     return (
-      <TouchableOpacity
-        style={styles.planBox}
-        onPress={() => navigation.navigate("PlanDetailScreen", { plan: item })}
-      >
-        <Text style={styles.planName}>{item.name}</Text>
-      </TouchableOpacity>
+      <View style={styles.planBox}>
+        {/* 터치 시 상세 페이지 이동 */}
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={() =>
+            navigation.navigate("PlanDetailScreen", { plan: item })
+          }
+        >
+          <Text style={styles.planName}>{item.name}</Text>
+        </TouchableOpacity>
+
+        {/* 삭제 버튼 */}
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => deletePlan(item.id)}
+        >
+          <Text style={{ color: "white", fontWeight: "bold" }}>Delete</Text>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -43,15 +68,22 @@ export default function ViewPlanScreen({ navigation }) {
     <FlatList
       data={plans}
       renderItem={renderPlanItem}
-      keyExtractor={(item) => item.id}
+      keyExtractor={(item, index) => item.id?.toString() ?? index.toString()}
       contentContainerStyle={{ padding: 16 }}
-      ListEmptyComponent={<Text style={{textAlign: 'center', marginTop: 20}}>No saved plans yet.</Text>}
+      ListEmptyComponent={
+        <Text style={{ textAlign: "center", marginTop: 20 }}>
+          No saved plans yet.
+        </Text>
+      }
     />
   );
 }
 
 const styles = StyleSheet.create({
   planBox: {
+    flexDirection: "row", // 가로 배치
+    alignItems: "center",
+    justifyContent: "space-between",
     marginVertical: 8,
     padding: 20,
     borderWidth: 1,
@@ -62,5 +94,12 @@ const styles = StyleSheet.create({
   planName: {
     fontSize: 18,
     fontWeight: "bold",
+  },
+  deleteButton: {
+    marginLeft: 10,
+    backgroundColor: "red",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
   },
 });
