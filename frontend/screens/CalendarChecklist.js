@@ -1,32 +1,54 @@
 // frontend/screens/CalendarChecklist.js
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Calendar } from "react-native-calendars";
+import { useIsFocused } from "@react-navigation/native";
 
 export default function CalendarChecklist() {
   const [dailyPlans, setDailyPlans] = useState([]);
   const [weeklyPlans, setWeeklyPlans] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const [viewMode, setViewMode] = useState("daily"); // 'daily' | 'weekly'
   const [checklist, setChecklist] = useState({ daily: {}, weekly: {} });
+  const isFocused = useIsFocused();
 
   // Load plans from AsyncStorage
   useEffect(() => {
     const loadPlans = async () => {
       try {
-        const storedDaily = await AsyncStorage.getItem("dailyPlans");
-        const storedWeekly = await AsyncStorage.getItem("weeklyPlans");
+        const plansStr = await AsyncStorage.getItem("plans");
+        const plans = plansStr ? JSON.parse(plansStr) : [];
 
-        setDailyPlans(storedDaily ? JSON.parse(storedDaily) : []);
-        setWeeklyPlans(storedWeekly ? JSON.parse(storedWeekly) : []);
+        // Flatten all daily/weekly plans from all saved plans, adding the plan name to each block
+        const allDaily = plans.flatMap((plan) =>
+          plan.daily.map((day) => ({
+            ...day,
+            blocks: day.blocks.map((block) => ({ ...block, planName: plan.name })),
+          }))
+        );
+        const allWeekly = plans.flatMap((plan) =>
+          plan.weekly.map((week) => ({ ...week, planName: plan.name }))
+        );
+
+        setDailyPlans(allDaily);
+        setWeeklyPlans(allWeekly);
       } catch (err) {
         console.error("Error loading plans:", err);
       }
     };
-
-    loadPlans();
-  }, []);
+    if (isFocused) {
+      loadPlans();
+    }
+  }, [isFocused]);
 
   // Toggle check for daily or weekly
   const toggleCheck = (type, blockIdx, detailIdx) => {
@@ -46,6 +68,7 @@ export default function CalendarChecklist() {
       : weeklyPlans.map((week) => ({
           title: week.theme,
           details: week.details || [],
+          planName: week.planName, // Pass the planName through
         }));
 
   // Calculate progress
@@ -61,7 +84,7 @@ export default function CalendarChecklist() {
             return doneCount + checked;
           }, 0) /
             tasksToShow.reduce((total, block) => total + (block.details?.length || 0), 0) *
-            100
+              100
         );
 
   // Category color
@@ -85,14 +108,25 @@ export default function CalendarChecklist() {
       {/* Calendar */}
       <Calendar
         onDayPress={(day) => setSelectedDate(day.dateString)}
-        markedDates={{
-          [selectedDate]: { selected: true, selectedColor: "#00adf5" },
-        }}
+        markedDates={dailyPlans.reduce((acc, day) => {
+          acc[day.date] = { marked: true };
+          if (day.date === selectedDate) {
+            acc[day.date].selected = true;
+            acc[day.date].selectedColor = "#00adf5";
+          }
+          return acc;
+        }, {})}
         style={{ marginBottom: 10 }}
       />
 
       {/* Navigation bar */}
-      <View style={{ flexDirection: "row", justifyContent: "center", marginBottom: 10 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          marginBottom: 10,
+        }}
+      >
         {["daily", "weekly"].map((mode) => (
           <TouchableOpacity
             key={mode}
@@ -102,7 +136,9 @@ export default function CalendarChecklist() {
               viewMode === mode && styles.navButtonSelected,
             ]}
           >
-            <Text style={{ color: "white", fontWeight: "bold" }}>{mode.toUpperCase()}</Text>
+            <Text style={{ color: "white", fontWeight: "bold" }}>
+              {mode.toUpperCase()}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -114,9 +150,12 @@ export default function CalendarChecklist() {
       <ScrollView style={{ flex: 1, paddingHorizontal: 10 }}>
         {tasksToShow.map((block, bIdx) => (
           <View key={bIdx} style={{ marginBottom: 10 }}>
-            <Text style={{ fontWeight: "bold", marginBottom: 5 }}>
-              {viewMode === "daily" ? block.title : block.title}
-            </Text>
+            <View style={styles.blockHeader}>
+              <Text style={styles.blockTitle}>{block.title}</Text>
+              {block.planName && (
+                <Text style={styles.planNameTag}>{block.planName}</Text>
+              )}
+            </View>
             {(block.details || []).map((d, dIdx) => (
               <TouchableOpacity
                 key={dIdx}
@@ -155,5 +194,22 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     backgroundColor: "#f0f0f0",
     borderRadius: 6,
+  },
+  blockHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  blockTitle: {
+    fontWeight: 'bold',
+  },
+  planNameTag: {
+    fontSize: 10,
+    color: '#fff',
+    backgroundColor: 'gray',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
 });

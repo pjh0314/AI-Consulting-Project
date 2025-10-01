@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, Button, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Calendar } from "react-native-calendars";
 
 export default function PayloadFormScreen({ navigation }) {
     const [step, setStep] = useState(0);
@@ -26,7 +27,21 @@ export default function PayloadFormScreen({ navigation }) {
     };
 
     const updateField = (field, value) => {
-        setPayload((prev) => ({ ...prev, [field]: value }));
+        setPayload((prev) => {
+            let updated = { ...prev, [field]: value };
+
+            if (field === "startDate") {
+                const start = new Date(value);
+                if (!isNaN(start.getTime())) {
+                    const end = new Date(start);
+                    end.setDate(start.getDate() + 28); // +4 weeks
+                    const endStr = end.toISOString().split("T")[0]; // YYYY-MM-DD
+                    updated.endDate = endStr;
+                }
+            }
+
+            return updated;
+        });
     };
 
     const savePayload = async () => {
@@ -154,31 +169,23 @@ export default function PayloadFormScreen({ navigation }) {
                         </View>
                     </>
                 );
-            case 7:
-                return (
-                    <>
-                        <Text style={styles.label}>Start Date</Text>
-                        <TextInput
-                            placeholder="YYYY-MM-DD"
-                            value={payload.startDate}
-                            onChangeText={(v) => updateField("startDate", v)}
-                            style={styles.input}
-                        />
-                    </>
-                );
+  case 7:
+        return (
+          <>
+            <Text style={styles.label}>Select Start Date</Text>
+            <Calendar
+              onDayPress={(day) => updateField("startDate", day.dateString)}
+              markedDates={{
+                [payload.startDate]: { selected: true, selectedColor: "blue" },
+              }}
+            />
+            <Text style={{ marginTop: 10 }}>
+              Selected Start Date: {payload.startDate}
+            </Text>
+            <Text>Calculated End Date: {payload.endDate}</Text>
+          </>
+        );
             case 8:
-                return (
-                    <>
-                        <Text style={styles.label}>End Date</Text>
-                        <TextInput
-                            placeholder="YYYY-MM-DD"
-                            value={payload.endDate}
-                            onChangeText={(v) => updateField("endDate", v)}
-                            style={styles.input}
-                        />
-                    </>
-                );
-            case 9:
                 return (
                     <>
                         <Text style={styles.label}>Constraints</Text>
@@ -190,7 +197,7 @@ export default function PayloadFormScreen({ navigation }) {
                         />
                     </>
                 );
-            case 10:
+            case 9:
                 return (
                     <>
                         <Text style={styles.label}>Preferences</Text>
@@ -202,7 +209,7 @@ export default function PayloadFormScreen({ navigation }) {
                         />
                     </>
                 );
-            case 11:
+            case 10:
                 return (
                     <>
                         <Text style={styles.label}>Diet Effort</Text>
@@ -242,7 +249,7 @@ export default function PayloadFormScreen({ navigation }) {
         <View style={{ flex: 1, padding: 20 }}>
             {renderStep()}
 
-            {step <= 11 && (
+            {step <= 10 && (
                 <Button title="Next" onPress={() => setStep(step + 1)} />
             )}
         </View>
