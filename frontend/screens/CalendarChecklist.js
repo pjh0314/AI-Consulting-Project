@@ -30,13 +30,13 @@ export default function CalendarChecklist() {
 
         // Flatten all daily/weekly plans from all saved plans, adding the plan name to each block
         const allDaily = plans.flatMap((plan) =>
-          plan.daily.map((day) => ({
+          (plan.daily || []).map((day) => ({
             ...day,
             blocks: day.blocks.map((block) => ({ ...block, planName: plan.name })),
           }))
         );
         const allWeekly = plans.flatMap((plan) =>
-          plan.weekly.map((week) => ({ ...week, planName: plan.name }))
+          (plan.weekly || []).map((week) => ({ ...week, planName: plan.name }))
         );
 
         setDailyPlans(allDaily);
@@ -149,7 +149,7 @@ export default function CalendarChecklist() {
       {/* Checklist */}
       <ScrollView style={{ flex: 1, paddingHorizontal: 10 }}>
         {tasksToShow.map((block, bIdx) => (
-          <View key={bIdx} style={{ marginBottom: 10 }}>
+          <View key={`${viewMode}-${bIdx}`} style={{ marginBottom: 10 }}>
             <View style={styles.blockHeader}>
               <Text style={styles.blockTitle}>{block.title}</Text>
               {block.planName && (
