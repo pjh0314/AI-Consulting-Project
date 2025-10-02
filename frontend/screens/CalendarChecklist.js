@@ -19,20 +19,28 @@ export default function CalendarChecklist() {
   );
   const [viewMode, setViewMode] = useState("daily"); // 'daily' | 'weekly'
   const [checklist, setChecklist] = useState({ daily: {}, weekly: {} });
+  const [planStartDate, setPlanStartDate] = useState(null); // payload startDate
   const isFocused = useIsFocused();
 
-  // Load plans from AsyncStorage
+  // Load plans & payload from AsyncStorage
   useEffect(() => {
-    const loadPlans = async () => {
+    const loadData = async () => {
       try {
         const plansStr = await AsyncStorage.getItem("plans");
         const plans = plansStr ? JSON.parse(plansStr) : [];
 
-        // Flatten all daily/weekly plans from all saved plans, adding the plan name to each block
+        const payloadStr = await AsyncStorage.getItem("payload");
+        const payload = payloadStr ? JSON.parse(payloadStr) : null;
+        if (payload?.startDate) setPlanStartDate(payload.startDate); // Use startDate from payload to calculate the week based on selected day
+
+        // Flatten all daily/weekly plans from all saved plans
         const allDaily = plans.flatMap((plan) =>
           (plan.daily || []).map((day) => ({
             ...day,
-            blocks: day.blocks.map((block) => ({ ...block, planName: plan.name })),
+            blocks: (day.blocks || []).map((block) => ({
+              ...block,
+              planName: plan.name,
+            })),
           }))
         );
         const allWeekly = plans.flatMap((plan) =>
@@ -45,9 +53,8 @@ export default function CalendarChecklist() {
         console.error("Error loading plans:", err);
       }
     };
-    if (isFocused) {
-      loadPlans();
-    }
+
+    if (isFocused) loadData();
   }, [isFocused]);
 
   // Toggle check for daily or weekly
@@ -56,20 +63,44 @@ export default function CalendarChecklist() {
       const newChecks = { ...prev };
       if (!newChecks[type]) newChecks[type] = {};
       if (!newChecks[type][blockIdx]) newChecks[type][blockIdx] = {};
-      newChecks[type][blockIdx][detailIdx] = !newChecks[type][blockIdx][detailIdx];
+      newChecks[type][blockIdx][detailIdx] =
+        !newChecks[type][blockIdx][detailIdx];
       return newChecks;
     });
   };
 
-  // Filter tasks to show
+  // Calculate the week order based on selected Day
+  const getWeekNumber = (selectedDate, startDate) => {
+    if (!startDate) return 1;
+    const start = new Date(startDate);
+    const selected = new Date(selectedDate);
+
+    // Sunday is the starting of the week
+    const startSunday = new Date(start);
+    startSunday.setDate(startSunday.getDate() - startSunday.getDay());
+
+    const selectedSunday = new Date(selected);
+    selectedSunday.setDate(selectedSunday.getDate() - selectedSunday.getDay());
+
+    const diffWeeks = Math.floor(
+      (selectedSunday - startSunday) / (1000 * 60 * 60 * 24 * 7)
+    );
+    return diffWeeks + 1; // Start week_number as 1
+  };
+
+  const selectedWeekNumber = getWeekNumber(selectedDate, planStartDate);
+
+  // Filter tasks to show like on weeekly mode it shows only weekly plan that selected day belongs to
   const tasksToShow =
     viewMode === "daily"
       ? dailyPlans.find((d) => d.date === selectedDate)?.blocks || []
-      : weeklyPlans.map((week) => ({
-          title: week.theme,
-          details: week.details || [],
-          planName: week.planName, // Pass the planName through
-        }));
+      : weeklyPlans
+          .filter((week) => week.week_number === selectedWeekNumber)
+          .map((week) => ({
+            title: week.theme,
+            details: week.details || [],
+            planName: week.planName,
+          }));
 
   // Calculate progress
   const progress =
@@ -83,8 +114,11 @@ export default function CalendarChecklist() {
             ).length;
             return doneCount + checked;
           }, 0) /
-            tasksToShow.reduce((total, block) => total + (block.details?.length || 0), 0) *
-              100
+            tasksToShow.reduce(
+              (total, block) => total + (block.details?.length || 0),
+              0
+            ) *
+            100
         );
 
   // Category color
@@ -144,7 +178,9 @@ export default function CalendarChecklist() {
       </View>
 
       {/* Progress */}
-      <Text style={{ textAlign: "center", marginBottom: 10 }}>Progress: {progress}%</Text>
+      <Text style={{ textAlign: "center", marginBottom: 10 }}>
+        Progress: {progress}%
+      </Text>
 
       {/* Checklist */}
       <ScrollView style={{ flex: 1, paddingHorizontal: 10 }}>
@@ -196,18 +232,18 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   blockHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 5,
   },
   blockTitle: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   planNameTag: {
     fontSize: 10,
-    color: '#fff',
-    backgroundColor: 'gray',
+    color: "#fff",
+    backgroundColor: "gray",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
